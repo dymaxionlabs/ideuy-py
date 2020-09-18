@@ -44,8 +44,7 @@ def parse_args(args):
     parser.add_argument("-a", "--aoi", help="path to AOI vector file")
     parser.add_argument("-c",
                         "--category",
-                        nargs="+",
-                        default=[],
+                        action="append",
                         help="filter by category")
     parser.add_argument("-L",
                         "--limit",

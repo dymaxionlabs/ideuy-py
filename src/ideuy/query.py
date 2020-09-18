@@ -25,6 +25,9 @@ _logger = logging.getLogger(__name__)
 
 
 def query(query=None, aoi=None, limit=None, categories=[], file_filters=[]):
+    if not categories:
+        categories = []
+
     params = {**DEFAULT_PARAMS, 'facet.q': '&'.join(categories)}
 
     if query:
