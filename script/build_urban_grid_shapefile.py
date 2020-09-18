@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-This internal script fixes creates a reference grid GeoJSON for the Urban ortoimage.
+This internal script fixes the reference grid GeoJSON for the Urban ortoimage.
 Each feature represents each image ("hoja") and has a 'data_path' property with
 the path where the image is stored in the data repository at IDE.
 
-The resulting shapefile is already included in the ideuy package.
+The resulting GeoJSON is already included in the ideuy package.
 
 Requirements:
 - ideuy
@@ -23,7 +23,6 @@ from bs4 import BeautifulSoup
 from shapely.geometry import shape
 
 from ideuy.download import BASE_HOST, DATA_PATH, download_grid
-from ideuy.vector import write_geojson
 
 IMAGE_FORMAT_PATH = '02_RGBI_8bits'
 
