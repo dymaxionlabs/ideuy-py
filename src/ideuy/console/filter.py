@@ -52,6 +52,7 @@ def parse_args(args):
                         "-o",
                         required=True,
                         help="Path to output GeoJSON vector file")
+
     parser.add_argument(
         "--grid-vector",
         default=None,
