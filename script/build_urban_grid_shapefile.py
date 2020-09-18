@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-This internal script fixes the current urban grid shapefile by adding the
-missing "city" column, needed for building the full URL of each file in the
-IDEUY data repository.
+This internal script fixes creates a reference grid GeoJSON for the Urban ortoimage.
+Each feature represents each image ("hoja") and has a 'data_path' property with
+the path where the image is stored in the data repository at IDE.
 
 The resulting shapefile is already included in the ideuy package.
 
@@ -12,18 +12,6 @@ Requirements:
 - rasterio
 - shapely
 - tqdm
-
----
-
-Para cada directorio CU, y cada subdirectorio de ciudad, descargar los jgw y
-16kb de cada jpg, manteniendo la estructura de directorios ([remesa]/[ciudad])
-
-Recorrer y construir el bounding box de cada una de las hojas como un geojson.
-
-Determinar a qué ciudad pertenece cada hoja por el directrio en donde se
-encontraba, y agregar ciudad como columna en el shapefile de hojas de CU.
-
-Incluir shapefiles urbano y rural en el paquete de Python.
 
 """
 import os
