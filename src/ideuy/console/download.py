@@ -10,7 +10,7 @@ import logging
 import sys
 
 from ideuy import __version__
-from ideuy.download import download_all
+from ideuy.download import download_all_products
 from ideuy.query import filter_products_by_files
 
 __author__ = "Damián Silvani"
@@ -95,7 +95,9 @@ def main(args):
     products = json.load(args.infile)
     products = filter_products_by_files(products,
                                         file_filters=args.file_filters)
-    download_all(products, output_dir=args.output_dir, num_jobs=args.num_jobs)
+    download_all_products(products,
+                          output_dir=args.output_dir,
+                          num_jobs=args.num_jobs)
 
 
 def run():

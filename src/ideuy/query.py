@@ -6,7 +6,7 @@ from itertools import zip_longest, islice
 import requests
 from shapely.ops import transform
 
-from ideuy.vector import get_vector_bounds_and_crs, reproject_shape
+from ideuy.vector import get_vector_bounds_and_crs, reproject_shape, flip
 
 HOSTNAME = "https://visualizador.ide.uy"
 SERVICE_PATH = "/geonetwork/srv/eng/q"
@@ -94,11 +94,6 @@ def grouper(iterable, n, fillvalue=None):
     # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
     args = [iter(iterable)] * n
     return zip_longest(*args, fillvalue=fillvalue)
-
-
-def flip(x, y):
-    """Flips the x and y coordinate values"""
-    return y, x
 
 
 def query_all_pages(params):

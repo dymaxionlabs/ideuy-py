@@ -2,14 +2,15 @@ import logging
 import os
 from functools import partial
 from multiprocessing.pool import ThreadPool
-from pathlib import Path
+from urllib.parse import urlparse
 from urllib.request import urlopen
 
 import fiona
 import requests
 from tqdm import tqdm
 
-BASE_URL = 'https://visualizador.ide.uy/descargas/datos/'
+BASE_HOST = 'https://visualizador.ide.uy'
+DATA_PATH = '/descargas/datos/'
 DEFAULT_CRS = 'epsg:4326'
 
 GRID_SHP_EXTS = ['cpg', 'dbf', 'prj', 'shp', 'shx']
@@ -30,18 +31,30 @@ PRODUCT_PATHS_BY_TYPE = {
         for ext in ('jpg', 'jgw')
     ]
 }
-IMAGE_URL = BASE_URL + "{type_dir}/02_Ortoimagenes/{product_path}"
+IMAGE_URL = f'{BASE_HOST}{DATA_PATH}' '{type_dir}/02_Ortoimagenes/{product_path}'
 
 _logger = logging.getLogger(__name__)
 
 
-def download_all(products, num_jobs=1, *, output_dir):
+def download_all_products(products, num_jobs=1, *, output_dir):
     products = add_extra_files(products)
+    urls = [file['url'] for p in products for file in p['__files']]
+    download_all(urls, num_jobs=num_jobs, output_dir=output_dir)
+
+
+def download_all(urls,
+                 num_jobs=1,
+                 file_size=None,
+                 flatten=True,
+                 *,
+                 output_dir):
     with ThreadPool(num_jobs) as pool:
-        worker = partial(download_from_url, output_dir=output_dir)
-        file_urls = [file['url'] for p in products for file in p['__files']]
-        with tqdm(total=len(file_urls)) as pbar:
-            for _ in enumerate(pool.imap_unordered(worker, file_urls)):
+        worker = partial(download_from_url,
+                         output_dir=output_dir,
+                         flatten=flatten,
+                         file_size=file_size)
+        with tqdm(total=len(urls)) as pbar:
+            for _ in enumerate(pool.imap_unordered(worker, urls)):
                 pbar.update()
 
 
@@ -112,7 +125,7 @@ def download_images_from_grid_vector(grid_vector,
 def download_grid(type_id, *, output_dir):
     if type_id not in GRID_PATHS_BY_TYPE.keys():
         raise RuntimeError("type_id is invalid")
-    base_url = BASE_URL + GRID_PATHS_BY_TYPE[type_id]
+    base_url = f'{BASE_HOST}{DATA_PATH}{GRID_PATHS_BY_TYPE[type_id]}'
     res = None
     for ext in GRID_SHP_EXTS:
         url = f'{base_url}.{ext}'
@@ -122,24 +135,35 @@ def download_grid(type_id, *, output_dir):
     return res
 
 
-def download_from_url(url, output_dir):
+def download_from_url(url, output_dir, file_size=None, flatten=True):
     """
     Download from a URL
 
     @param: url to download file
-    @param: dst place to put the file
+    @param: output_dir place to put the file
+    @param: file_size specify the output file size, only downloads up to this point
+    @param: flatten: keep original dir structure in URL or not
     """
     _logger.info(f"Download {url} to {output_dir}")
-    filename = url.split('/')[-1]
-    dst = Path(output_dir) / filename
 
-    file_size = int(urlopen(url).info().get('Content-Length', -1))
+    # Extract path from url (without the leading slash)
+    path = urlparse(url).path[1:]
+    if flatten:
+        filename = path.split("/")[-1]
+        dst = os.path.join(output_dir, filename)
+    else:
+        dst = os.path.join(output_dir, path)
+
+    real_file_size = int(urlopen(url).info().get('Content-Length', -1))
+    if not file_size or file_size > real_file_size:
+        file_size = real_file_size
+
     if os.path.exists(dst):
         first_byte = os.path.getsize(dst)
     else:
         first_byte = 0
     if first_byte >= file_size:
-        return file_size
+        return dst, file_size
     header = {"Range": "bytes=%s-%s" % (first_byte, file_size)}
     pbar = tqdm(total=file_size,
                 initial=first_byte,
@@ -147,7 +171,8 @@ def download_from_url(url, output_dir):
                 unit_scale=True,
                 desc=url.split('/')[-1])
     req = requests.get(url, headers=header, stream=True)
-    os.makedirs(output_dir, exist_ok=True)
+
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
     with open(dst, 'ab') as f:
         for chunk in req.iter_content(chunk_size=1024):
             if chunk:

@@ -24,6 +24,11 @@ def reproject_shape(shp, from_crs, to_crs):
     return transform(project, shp)
 
 
+def flip(x, y):
+    """Flips the x and y coordinate values"""
+    return y, x
+
+
 def write_geojson(features, output_path):
     with open(output_path, "w") as f:
         d = {"type": "FeatureCollection", "features": []}
