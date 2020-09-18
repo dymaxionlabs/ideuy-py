@@ -44,7 +44,6 @@ def query(query=None, aoi=None, categories=[], file_filters=[]):
 
     raw_products = query_all_pages(params)
     products = build_products(raw_products)
-    products = filter_products_by_files(products, file_filters=file_filters)
 
     return products
 

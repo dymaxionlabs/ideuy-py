@@ -56,7 +56,10 @@ def parse_args(args):
                         required=True,
                         help="path to grid vector")
     parser.add_argument("-o", "--output-dir", default=".", help="output dir")
-    parser.add_argument("-j", "--num-jobs", default=1, type=int,
+    parser.add_argument("-j",
+                        "--num-jobs",
+                        default=1,
+                        type=int,
                         help="number of simultaneous download threads")
 
     parser.add_argument("--version",

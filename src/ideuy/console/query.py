@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-This script downloads files from a JSON of products
+This script allows you to query the IDE UY catalog service.
+It prints search results as JSON, which can then be passed to the
+download script for downloading all files.
 
 """
 
 import argparse
-import json
 import logging
 import sys
+import json
 
 from ideuy import __version__
 from ideuy.download import download_all
-from ideuy.query import filter_products_by_files
+from ideuy.query import query
 
 __author__ = "Damián Silvani"
 __copyright__ = "Damián Silvani"
@@ -30,26 +32,27 @@ def parse_args(args):
       :obj:`argparse.Namespace`: command line parameters namespace
     """
     parser = argparse.ArgumentParser(
-        description="Downloads image products from IDEuy",
+        description="Search for products using the IDEuy Web Service",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('infile',
+    parser.add_argument('outfile',
                         nargs='?',
-                        type=argparse.FileType('r'),
-                        default=sys.stdin)
-    parser.add_argument("-o", "--output-dir", default=".", help="output dir")
+                        type=argparse.FileType('w'),
+                        default=sys.stdout)
 
-    # Filters
-    parser.add_argument("--files",
+    parser.add_argument("-q", "--query", help="search by title")
+    parser.add_argument("-a", "--aoi", help="path to AOI vector file")
+    parser.add_argument("-c",
+                        "--category",
                         nargs="+",
                         default=[],
-                        help="filter files in product")
+                        help="filter by category")
 
-    parser.add_argument("-j",
-                        "--num-jobs",
-                        default=1,
-                        type=int,
-                        help="number of simultaneous download threads")
+    # parser.add_argument("-j",
+    #                     "--num-jobs",
+    #                     default=1,
+    #                     type=int,
+    #                     help="number of simultaneous download threads")
 
     parser.add_argument("--version",
                         action="version",
@@ -92,10 +95,8 @@ def main(args):
     args = parse_args(args)
     setup_logging(args.loglevel)
 
-    products = json.load(args.infile)
-    products = filter_products_by_files(products,
-                                        file_filters=args.file_filters)
-    download_all(products, output_dir=args.output_dir, num_jobs=args.num_jobs)
+    products = query(query=args.query, aoi=args.aoi, categories=args.category)
+    json.dump(products, args.outfile)
 
 
 def run():
