@@ -15,18 +15,17 @@ Requirements:
 
 """
 import os
-from glob import glob
+from urllib.parse import urlparse
 
-import rasterio
+import fiona
 import requests
 from bs4 import BeautifulSoup
-from shapely.geometry import box
-from shapely.ops import transform
-from tqdm import tqdm
+from shapely.geometry import shape
 
-from ideuy.download import BASE_HOST, DATA_PATH, download_all, download_grid
-from ideuy.vector import (flip, get_vector_bounds_and_crs, reproject_shape,
-                          write_geojson)
+from ideuy.download import BASE_HOST, DATA_PATH, download_grid
+from ideuy.vector import write_geojson
+
+IMAGE_FORMAT_PATH = '02_RGBI_8bits'
 
 
 def list_all_images():
@@ -36,8 +35,8 @@ def list_all_images():
         url = f'{BASE_HOST}{DATA_PATH}CU_Remesa_{remesa:0>2}/02_Ortoimagenes/'
         city_dirs = list_directory(url)
         for city_dir in city_dirs:
-            # Build city URL for 03_RGB_8bits (JPG files)
-            city_url = f'{city_dir}03_RGB_8bits/'
+            # Build city URL
+            city_url = f'{city_dir}{IMAGE_FORMAT_PATH}/'
             urls = list_directory(city_url)
             print(city_dir, len(urls))
             res.extend(urls)
@@ -66,67 +65,59 @@ def list_directory(url):
     return [f'{url}{f.get("href")}' for f in files]
 
 
-def create_urban_grid_geojson(output_dir):
-    features = []
-    remesa_dirs = sorted(glob(os.path.join(output_dir, DATA_PATH[1:], '*')))
+def build_data_path_by_coord_dictionary(urls):
+    res = {}
+    for url in urls:
+        path = urlparse(url).path
+        data_path = path[path.index(DATA_PATH) +
+                         len(DATA_PATH):path.index(IMAGE_FORMAT_PATH)]
+        filename = path.split('/')[-1]
+        parts = filename.split('_')
+        coord = parts[0]
+        res[coord] = data_path
+    return res
 
-    print("Building grid features...")
-    for remesa_dir in remesa_dirs:
-        remesa = remesa_dir.split('/')[-1]
-        city_dirs = sorted(glob(os.path.join(remesa_dir, '*', '*')))
 
-        for city_dir in city_dirs:
-            city_id = city_dir.split('/')[-1].split('_')[-1]
-            images = glob(os.path.join(city_dir, '*', '*.jpg'))
-            images.extend(glob(os.path.join(city_dir, '*', '*.jp2')))
-            images = sorted(images)
+def create_urban_grid_geojson(*, original_grid, image_urls, output_dir):
+    # Build dict of (MGRS coord, image dirname)
+    paths_by_coord = build_data_path_by_coord_dictionary(image_urls)
 
-            for image in tqdm(images):
-                with rasterio.open(image) as src:
-                    minx, miny, maxx, maxy = src.bounds
-                bbox = box(minx, miny, maxx, maxy)
-                bbox = reproject_shape(bbox, 'epsg:5382', 'epsg:4326')
-                bbox = transform(flip, bbox)
-                name, _ = os.path.splitext(os.path.basename(image))
-                mgrs_coord = name.split('_')[0]
+    # Create a new geojson with the same schema< CRS and features than the original,
+    # but with an extra column 'data_path', using the recently built map.
+    dst_path = os.path.join(output_dir, 'urban_grid.geojson')
+    with fiona.open(original_grid) as src:
+        schema = src.schema.copy()
+        schema['properties']['data_path'] = 'str:180'
 
-                image_dirname = os.path.dirname(image)
-                data_path = image_dirname[image_dirname.index(DATA_PATH) +
-                                          len(DATA_PATH):image_dirname.
-                                          index('03_RGB_8bits')]
+        with fiona.open(dst_path,
+                        'w',
+                        driver='GeoJSON',
+                        crs=src.crs,
+                        schema=src.schema) as dst:
+            for feat in src:
+                feat = feat.copy()
+                coord = feat['properties']['Nombre']
+                feat['properties']['data_path'] = paths_by_coord[coord]
+                dst.write(feat)
 
-                feature = {
-                    'properties': {
-                        'id': name,
-                        'remesa': remesa,
-                        'city_id': city_id,
-                        'mgrs_coord': mgrs_coord,
-                        'data_path': data_path
-                    }
-                }
-                features.append((feature, bbox))
-
-    dst = os.path.join(output_dir, 'urban_grid.geojson')
-    return write_geojson(features, dst)
+    return dst_path
 
 
 def main():
     output_dir = './out/'
-    num_jobs = 4
 
-    # For each remesa, list directories:
+    # First, download original urban grid
+    original_grid = download_grid('urban', output_dir=output_dir)
+
+    # List directories recursively in data repository
     image_urls = list_all_images()
 
-    # Download at most 16kb of each image, we only want to know the image size
-    # Also, keep original dir structure.
-    download_all(image_urls,
-                 num_jobs=num_jobs,
-                 output_dir=output_dir,
-                 flatten=False,
-                 file_size=16 * 1024)
-
-    path = create_urban_grid_geojson(output_dir)
-    print("New urban grid shapefile written at:", path)
+    # Create new urban grid using features from original one,
+    # and listings from data repository
+    new_grid = create_urban_grid_geojson(original_grid=original_grid,
+                                         image_urls=image_urls,
+                                         output_dir=output_dir)
+    print("New urban grid shapefile written at:", new_grid)
 
 
 if __name__ == '__main__':
