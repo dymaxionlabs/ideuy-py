@@ -1,7 +1,7 @@
 import json
 import logging
 from fnmatch import fnmatch
-from itertools import zip_longest
+from itertools import zip_longest, islice
 
 import requests
 from shapely.ops import transform
@@ -24,7 +24,7 @@ DEFAULT_PARAMS = {
 _logger = logging.getLogger(__name__)
 
 
-def query(query=None, aoi=None, categories=[], file_filters=[]):
+def query(query=None, aoi=None, limit=None, categories=[], file_filters=[]):
     params = {**DEFAULT_PARAMS, 'facet.q': '&'.join(categories)}
 
     if query:
@@ -42,8 +42,10 @@ def query(query=None, aoi=None, categories=[], file_filters=[]):
         bounds = transform(flip, bounds)
         params['geometry'] = bounds.wkt
 
-    raw_products = query_all_pages(params)
-    products = build_products(raw_products)
+    gen = query_all_pages(params)
+    if limit:
+        gen = islice(gen, limit)
+    products = build_products(gen)
 
     return products
 

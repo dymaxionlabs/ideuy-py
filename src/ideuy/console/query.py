@@ -47,6 +47,10 @@ def parse_args(args):
                         nargs="+",
                         default=[],
                         help="filter by category")
+    parser.add_argument("-L",
+                        "--limit",
+                        type=int,
+                        help="limit number of results")
 
     # parser.add_argument("-j",
     #                     "--num-jobs",
@@ -95,7 +99,10 @@ def main(args):
     args = parse_args(args)
     setup_logging(args.loglevel)
 
-    products = query(query=args.query, aoi=args.aoi, categories=args.category)
+    products = query(query=args.query,
+                     aoi=args.aoi,
+                     categories=args.category,
+                     limit=args.limit)
     json.dump(products, args.outfile)
 
 
