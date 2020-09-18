@@ -29,6 +29,21 @@ from ideuy.vector import (flip, get_vector_bounds_and_crs, reproject_shape,
                           write_geojson)
 
 
+def list_all_images():
+    res = []
+    for remesa in range(1, 11):
+        # Build remesa URL for 02_Ortoimagenes, and download directory listing
+        url = f'{BASE_HOST}{DATA_PATH}CU_Remesa_{remesa:0>2}/02_Ortoimagenes/'
+        city_dirs = list_directory(url)
+        for city_dir in city_dirs:
+            # Build city URL for 03_RGB_8bits (JPG files)
+            city_url = f'{city_dir}03_RGB_8bits/'
+            urls = list_directory(city_url)
+            print(city_dir, len(urls))
+            res.extend(urls)
+    return res
+
+
 def list_directory(url):
     res = requests.get(url)
     if not res.ok:
@@ -62,7 +77,9 @@ def create_urban_grid_geojson(output_dir):
 
         for city_dir in city_dirs:
             city_id = city_dir.split('/')[-1].split('_')[-1]
-            images = sorted(glob(os.path.join(city_dir, '*', '*.jpg')))
+            images = glob(os.path.join(city_dir, '*', '*.jpg'))
+            images.extend(glob(os.path.join(city_dir, '*', '*.jp2')))
+            images = sorted(images)
 
             for image in tqdm(images):
                 with rasterio.open(image) as src:
@@ -97,22 +114,8 @@ def main():
     output_dir = './out/'
     num_jobs = 4
 
-    # First, download original urban grid
-    download_grid('urban', output_dir=output_dir)
-
     # For each remesa, list directories:
-    image_urls = []
-    for remesa in range(1, 11):
-        # Build remesa URL for 02_Ortoimagenes, and download directory listing
-        url = f'{BASE_HOST}{DATA_PATH}CU_Remesa_{remesa:0>2}/02_Ortoimagenes/'
-        city_dirs = list_directory(url)
-
-        for city_dir in city_dirs:
-            # Build city URL for 03_RGB_8bits (JPG files)
-            city_url = f'{city_dir}03_RGB_8bits/'
-            urls = list_directory(city_url)
-            print(city_dir, len(urls))
-            image_urls.extend(urls)
+    image_urls = list_all_images()
 
     # Download at most 16kb of each image, we only want to know the image size
     # Also, keep original dir structure.
