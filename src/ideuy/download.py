@@ -13,94 +13,37 @@ BASE_HOST = 'https://visualizador.ide.uy'
 DATA_PATH = '/descargas/datos/'
 DEFAULT_CRS = 'epsg:4326'
 
+# deprecated: move to script/build_*
 GRID_SHP_EXTS = ['cpg', 'dbf', 'prj', 'shp', 'shx']
 GRID_PATHS_BY_TYPE = {
     'national': 'Grillas/Nacional/Articulacion_Ortoimagenes_Nacional',
     'urban': 'Grillas/Urbana/Articulacion_Ortoimagenes_Urbana',
 }
-TYPE_DIR = {
-    'national': 'CN_Remesa_{remesa_id:0>2}',
-    'urban': 'CU_Remesa_{remesa_id:0>2}'
+
+DIRS_BY_FORMAT = {
+    'rgbi_16bit': '01_RGBI_16bits',
+    'rgbi_8bit': '02_RGBI_8bits',
+    'rgb_8bit': '03_RGB_8bits'
 }
-PRODUCT_PATHS_BY_TYPE = {
-    'rgbi_16bit':
-    ['01_RGBI_16bits/{hoja_id}_RGBI_16_Remesa_{remesa_id:0>2}.tif'],
-    'rgbi_8bit': ['02_RGBI_8bits/{hoja_id}_RGBI_8_Remesa_{remesa_id:0>2}.tif'],
-    'rgb_8bit': [
-        '03_RGB_8bits/{hoja_id}_RGB_8_Remesa_{remesa_id:0>2}' + f'.{ext}'
-        for ext in ('jpg', 'jgw')
-    ]
+FORMAT_PART_BY_FORMAT = {
+    'rgbi_16bit': 'RGBI_16',
+    'rgbi_8bit': 'RGBI_16',
+    'rgb_8bit': 'RGB_8'
 }
+FILE_ID_BY_TYPE = {
+    'national': '{coord}_{format}_Remesa_{remesa_id:0>2}',
+    'urban': '{coord}_{format}_Remesa_{remesa_id:0>2}_{city_id}'
+}
+EXTS_BY_FORMAT = {
+    'rgbi_16bit': ['tif'],
+    'rgbi_8bit': ['tif'],
+    'rgb_8bit': ['jpg', 'jgw']
+}
+
+# deprecated
 IMAGE_URL = f'{BASE_HOST}{DATA_PATH}' '{type_dir}/02_Ortoimagenes/{product_path}'
 
 _logger = logging.getLogger(__name__)
-
-
-def download_all_products(products, num_jobs=1, *, output_dir):
-    products = add_extra_files(products)
-    urls = [file['url'] for p in products for file in p['__files']]
-    download_all(urls, num_jobs=num_jobs, output_dir=output_dir)
-
-
-def download_all(urls,
-                 num_jobs=1,
-                 file_size=None,
-                 flatten=True,
-                 *,
-                 output_dir):
-    with ThreadPool(num_jobs) as pool:
-        worker = partial(download_from_url,
-                         output_dir=output_dir,
-                         flatten=flatten,
-                         file_size=file_size)
-        with tqdm(total=len(urls)) as pbar:
-            for _ in enumerate(pool.imap_unordered(worker, urls)):
-                pbar.update()
-
-
-def add_extra_files(products):
-    for product in products:
-        new_files = []
-        for file in product['__files']:
-            # Workaround: add JGW file if link is a JPG:
-            if file['id'].endswith('.jpg'):
-                new_id = file['id'].replace('.jpg', '.jgw')
-                new_url = file['url'].replace('.jpg', '.jgw')
-                new_files.append(
-                    dict(id=new_id, name=file['name'], url=new_url))
-        product['__files'] = new_files
-    return products
-
-
-def download_image(*, output_dir, type_id, product_type_id, remesa_id,
-                   hoja_id):
-    if type_id not in ('national', 'urban'):
-        raise RuntimeError(
-            "Invalid type_id. Should be either 'national' or 'urban'")
-
-    if type_id == 'urban':
-        raise RuntimeError("Sorry, 'urban' type is still not supported.")
-
-    product_paths = PRODUCT_PATHS_BY_TYPE[product_type_id]
-
-    res = []
-    for product_path in product_paths:
-        t = TYPE_DIR[type_id].format(remesa_id=remesa_id)
-        p = product_path.format(remesa_id=remesa_id, hoja_id=hoja_id)
-        url = IMAGE_URL.format(type_dir=t, product_path=p)
-        output_path = download_from_url(url, output_dir)
-        res.append(output_path)
-    return res
-
-
-def download_feature_image(feat, *, output_dir, type_id, product_type_id):
-    remesa_id = int(feat['properties']['Remesa'])
-    hoja_id = feat['properties']['Nombre']
-    download_image(output_dir=output_dir,
-                   type_id=type_id,
-                   product_type_id=product_type_id,
-                   remesa_id=remesa_id,
-                   hoja_id=hoja_id)
 
 
 def download_images_from_grid_vector(grid_vector,
@@ -122,6 +65,81 @@ def download_images_from_grid_vector(grid_vector,
                 pbar.update()
 
 
+def download_feature_image(feat, *, output_dir, type_id, product_type_id):
+    props = feat['properties']
+    coord = props['Nombre']
+    remesa_id = props['Remesa']
+    data_path = props['data_path']
+    download_image(output_dir=output_dir,
+                   type_id=type_id,
+                   product_type_id=product_type_id,
+                   data_path=data_path,
+                   remesa_id=remesa_id,
+                   coord=coord)
+
+
+def download_image(dry_run=False,
+                   *,
+                   output_dir,
+                   type_id,
+                   product_type_id,
+                   data_path,
+                   remesa_id,
+                   coord):
+    if type_id not in ('national', 'urban'):
+        raise RuntimeError(
+            "Invalid type_id. Should be either 'national' or 'urban'")
+
+    format_part = FORMAT_PART_BY_FORMAT[product_type_id]
+    if type_id == 'natioanl':
+        name = FILE_ID_BY_TYPE[type_id].format(coord=coord,
+                                               format=format_part,
+                                               remesa_id=remesa_id)
+    else:
+        city_id = [p for p in data_path.split('/') if p][-1].split('_')[-1]
+        name = FILE_ID_BY_TYPE[type_id].format(coord=coord,
+                                               format=format_part,
+                                               remesa_id=remesa_id,
+                                               city_id=city_id)
+    exts = EXTS_BY_FORMAT[product_type_id]
+    filenames = [f'{name}.{ext}' for ext in exts]
+
+    product_type_dir = DIRS_BY_FORMAT[product_type_id]
+    urls = [
+        f'{BASE_HOST}{DATA_PATH}{data_path}{product_type_dir}/{filename}'
+        for filename in filenames
+    ]
+
+    # Workaround: for some reason, CU_Remesa_10 contains JPG2000 files, which
+    # have extensions .jp2/.j2w instead of .jpg/.jgw
+    if type_id == 'urban' and remesa_id == 10:
+        urls = [
+            url.replace('.jpg', '.jp2').replace('.jgw', '.j2w') for url in urls
+        ]
+
+    res = []
+    for url in urls:
+        res.append(download_from_url(url, output_dir))
+    return res
+
+
+def download_all(urls,
+                 num_jobs=1,
+                 file_size=None,
+                 flatten=True,
+                 *,
+                 output_dir):
+    with ThreadPool(num_jobs) as pool:
+        worker = partial(download_from_url,
+                         output_dir=output_dir,
+                         flatten=flatten,
+                         file_size=file_size)
+        with tqdm(total=len(urls)) as pbar:
+            for _ in enumerate(pool.imap_unordered(worker, urls)):
+                pbar.update()
+
+
+# deprecated: move to script/build_*
 def download_grid(type_id, *, output_dir):
     if type_id not in GRID_PATHS_BY_TYPE.keys():
         raise RuntimeError("type_id is invalid")

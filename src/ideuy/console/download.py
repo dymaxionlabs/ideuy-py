@@ -42,6 +42,8 @@ def parse_args(args):
         description="Downloads image products from IDEuy",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
+    parser.add_argument("grid_vector", help="path to grid vector")
+
     parser.add_argument("-t",
                         "--type",
                         default="national",
@@ -52,9 +54,6 @@ def parse_args(args):
                         default="rgb_8bit",
                         choices=["rgbi_16bit", "rgbi_8bit", "rgb_8bit"],
                         help="product type")
-    parser.add_argument("--grid-vector",
-                        required=True,
-                        help="path to grid vector")
     parser.add_argument("-o", "--output-dir", default=".", help="output dir")
     parser.add_argument("-j",
                         "--num-jobs",
