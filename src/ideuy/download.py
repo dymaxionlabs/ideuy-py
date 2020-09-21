@@ -68,13 +68,11 @@ def download_images_from_grid_vector(grid_vector,
 def download_feature_image(feat, *, output_dir, type_id, product_type_id):
     props = feat['properties']
     coord = props['Nombre']
-    remesa_id = props['Remesa']
     data_path = props['data_path']
     download_image(output_dir=output_dir,
                    type_id=type_id,
                    product_type_id=product_type_id,
                    data_path=data_path,
-                   remesa_id=remesa_id,
                    coord=coord)
 
 
@@ -84,13 +82,13 @@ def download_image(dry_run=False,
                    type_id,
                    product_type_id,
                    data_path,
-                   remesa_id,
                    coord):
     if type_id not in ('national', 'urban'):
         raise RuntimeError(
             "Invalid type_id. Should be either 'national' or 'urban'")
 
     format_part = FORMAT_PART_BY_FORMAT[product_type_id]
+    remesa_id = int(data_path.split('/')[0].split('_')[2])  # e.g CU_Remesa_03/...
     if type_id == 'natioanl':
         name = FILE_ID_BY_TYPE[type_id].format(coord=coord,
                                                format=format_part,
