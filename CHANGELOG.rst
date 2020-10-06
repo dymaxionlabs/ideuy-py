@@ -5,6 +5,6 @@ Changelog
 Version 0.1
 ===========
 
-- Feature A added
-- FIX: nasty bug #1729 fixed
-- add your changes here!
+- First public version
+- Script for filtering urban/national grids
+- Script for downloading images from a grid vector file

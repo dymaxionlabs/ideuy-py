@@ -19,3 +19,7 @@ pip install -e .
 
 * `ideuy_filter`: Filters a grid shapefile with another AOI shapefile
 * `ideuy_download_images`: Downloads orthoimages based on a grid shapefile
+
+## License
+
+MIT
