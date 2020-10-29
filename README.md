@@ -1,24 +1,26 @@
 # ideuy-py
 
-Python package for downloading the orthoimages from IDEuy
+Paquete de Python para descargar ortoimágenes de
+[IDEuy](https://www.gub.uy/infraestructura-datos-espaciales/).
 
-## Install
+## Instalación
+
+El paquete se puede instalar con pip, ejecutando desde una terminal:
 
 ```
 pip install --user ideuy
 ```
 
-## Usage
+## Uso
 
-### Available CLI scripts
+### Scripts de consola disponibles
 
-* `ideuy_filter`: Filters a grid shapefile with another AOI shapefile
-* `ideuy_download_images`: Downloads orthoimages based on a grid shapefile
+* `ideuy_filter`: Filtra un shapefile de grilla con otro shapefile de Áreas de Interés (AOI).
+* `ideuy_download_images`: Descarga las imágenes del vuelo basado en un shapefile de grilla.
 
-## Development
+## Desarrollo
 
-Create a virtual environment and install with pip in development mode, for
-example:
+Crear un entorno virtual e instalar el paquete con pip en modo desarrollo, por ejemplo:
 
 ```
 virtualenv -p python3 .venv/
@@ -26,6 +28,6 @@ source .venv/bin/activate
 pip install -e .
 ```
 
-## License
+## Licencia
 
-See [LICENSE.txt](LICENSE.txt).
+Ver [LICENSE.txt](LICENSE.txt).
