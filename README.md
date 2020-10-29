@@ -1,7 +1,9 @@
 # ideuy-py
 
-Paquete de Python para descargar ortoimágenes de
-[IDEuy](https://www.gub.uy/infraestructura-datos-espaciales/).
+Herramienta y paquete de Python que facilita la descarga programática de las
+ortoimágenes del vuelo fotogramétrico, disponibles desde el Visualizador online
+de la [Infraestructura de Datos Espaciales de Uruguay
+(IDEuy)](https://www.gub.uy/infraestructura-datos-espaciales/).
 
 ## Instalación
 
