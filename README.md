@@ -28,4 +28,4 @@ pip install -e .
 
 ## License
 
-MIT
+See [LICENSE.txt](LICENSE.txt).
