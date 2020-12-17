@@ -11,9 +11,8 @@
 <img  src="https://img.shields.io/badge/license-BSD%202-green">
 <img  src="https://img.shields.io/badge/version-0.1.0-yellow">
 <img  src="https://img.shields.io/badge/build%20with-python-yellow">
-<img  src="https://sonarcloud.io/api/project_badges/measure?project=dymaxionlabs_ideuy-py&metric=vulnerabilities">
-<img src="https://sonarcloud.io/api/project_badges/measure?project=dymaxionlabs_ideuy-py&metric=sqale_rating">
-<img src="https://sonarcloud.io/api/project_badges/measure?project=dymaxionlabs_ideuy-py&metric=duplicated_lines_density">
+<a href="https://sonarcloud.io/dashboard?id=dymaxionlabs_ideuy-py" target="_blank"><img src="https://sonarcloud.io/api/project_badges/measure?project=dymaxionlabs_ideuy-py&metric=alert_status"></a>
+ 
 </p>
 
 
